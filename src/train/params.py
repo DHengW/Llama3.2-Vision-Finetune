@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 from transformers import TrainingArguments as HFTrainingArguments
-from trl import DPOConfig as DPOConfigTRL
+from trl import CPOConfig as DPOConfigTRL
 
 
 @dataclass

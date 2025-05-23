@@ -20,6 +20,7 @@ from transformers.trainer import (
 
 from train.train_utils import get_peft_state_maybe_zero_3, get_peft_state_non_lora_maybe_zero_3
 
+
 def maybe_zero_3(param, ignore_status=False, name=None):
     from deepspeed import zero
     from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
@@ -33,6 +34,7 @@ def maybe_zero_3(param, ignore_status=False, name=None):
     else:
         param = param.detach().cpu().clone()
     return param
+
 
 class LLamaVTrainer(Trainer):
 
@@ -59,14 +61,17 @@ class LLamaVTrainer(Trainer):
             if self.args.vision_lr is not None:
                 lr_mapper["vision_model"] = self.args.vision_lr
             if len(lr_mapper) > 0:
-                special_lr_parameters = [name for name, _ in opt_model.named_parameters() if any(module_keyword in name for module_keyword in lr_mapper)]
+                special_lr_parameters = [name for name, _ in opt_model.named_parameters() if
+                                         any(module_keyword in name for module_keyword in lr_mapper)]
                 optimizer_grouped_parameters = [
                     {
-                        "params": [p for n, p in opt_model.named_parameters() if (n in decay_parameters and n not in special_lr_parameters and p.requires_grad)],
+                        "params": [p for n, p in opt_model.named_parameters() if
+                                   (n in decay_parameters and n not in special_lr_parameters and p.requires_grad)],
                         "weight_decay": self.args.weight_decay,
                     },
                     {
-                        "params": [p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n not in special_lr_parameters and p.requires_grad)],
+                        "params": [p for n, p in opt_model.named_parameters() if
+                                   (n not in decay_parameters and n not in special_lr_parameters and p.requires_grad)],
                         "weight_decay": 0.0,
                     },
                 ]
@@ -75,12 +80,14 @@ class LLamaVTrainer(Trainer):
                     optimizer_grouped_parameters.extend(
                         [
                             {
-                                "params": [p for n, p in opt_model.named_parameters() if (n in decay_parameters and n in module_parameters and p.requires_grad)],
+                                "params": [p for n, p in opt_model.named_parameters() if
+                                           (n in decay_parameters and n in module_parameters and p.requires_grad)],
                                 "weight_decay": self.args.weight_decay,
                                 "lr": lr,
                             },
                             {
-                                "params": [p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n in module_parameters and p.requires_grad)],
+                                "params": [p for n, p in opt_model.named_parameters() if
+                                           (n not in decay_parameters and n in module_parameters and p.requires_grad)],
                                 "weight_decay": 0.0,
                                 "lr": lr,
                             },
@@ -89,11 +96,13 @@ class LLamaVTrainer(Trainer):
             else:
                 optimizer_grouped_parameters = [
                     {
-                        "params": [p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad)],
+                        "params": [p for n, p in opt_model.named_parameters() if
+                                   (n in decay_parameters and p.requires_grad)],
                         "weight_decay": self.args.weight_decay,
                     },
                     {
-                        "params": [p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)],
+                        "params": [p for n, p in opt_model.named_parameters() if
+                                   (n not in decay_parameters and p.requires_grad)],
                         "weight_decay": 0.0,
                     },
                 ]
@@ -110,10 +119,10 @@ class LLamaVTrainer(Trainer):
                 for module in opt_model.modules():
                     if isinstance(module, nn.Embedding):
                         skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
-                        logger.info(f"skipped {module}: {skipped/2**20}M params")
+                        logger.info(f"skipped {module}: {skipped / 2 ** 20}M params")
                         manager.register_module_override(module, "weight", {"optim_bits": 32})
                         logger.debug(f"bitsandbytes: will optimize {module} in fp32")
-                logger.info(f"skipped: {skipped/2**20}M params")
+                logger.info(f"skipped: {skipped / 2 ** 20}M params")
 
         return self.optimizer
 
@@ -132,15 +141,16 @@ class LLamaVTrainer(Trainer):
             run_dir = self._get_output_dir(trial=trial)
             output_dir = os.path.join(run_dir, checkpoint_folder)
             self.save_model(output_dir, _internal_call=True)
-            non_lora_weights = get_peft_state_non_lora_maybe_zero_3(self.model.named_parameters(), require_grad_only=False)
+            non_lora_weights = get_peft_state_non_lora_maybe_zero_3(self.model.named_parameters(),
+                                                                    require_grad_only=False)
             torch.save(non_lora_weights, os.path.join(output_dir, "non_lora_state_dict.bin"))
 
-            if self.args.save_strategy in [SaveStrategy.STEPS, SaveStrategy.EPOCH] and self.state.best_global_step:
-                best_checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.best_global_step}"
-                best_checkpoint_dir = os.path.join(run_dir, best_checkpoint_folder)
+            # if self.args.save_strategy in [SaveStrategy.STEPS, SaveStrategy.EPOCH] and self.state.best_global_step:
+            #     best_checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.best_global_step}"
+            #     best_checkpoint_dir = os.path.join(run_dir, best_checkpoint_folder)
 
-                if os.path.exists(best_checkpoint_dir):
-                    self.state.best_model_checkpoint = best_checkpoint_dir
+            #     if os.path.exists(best_checkpoint_dir):
+            #         self.state.best_model_checkpoint = best_checkpoint_dir
 
             if not self.args.save_only_model:
                 # Save optimizer and scheduler
@@ -172,7 +182,7 @@ class LLamaVTrainer(Trainer):
     #     for name, param in model.named_parameters():
     #         if 'vision_model' in name and param.requires_grad:
     #             print(f"Training parameter {name}")
-            
+
     #         elif 'img_projection' in name and param.requires_grad:
     #             print(f"Training parameter {name}")
     #     return super().training_step(model, inputs)
